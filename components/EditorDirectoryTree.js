@@ -1,4 +1,5 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import { makeStyles } from '@material-ui/core/styles'
 import Box from '@material-ui/core/Box'
 import IconButton from '@material-ui/core/IconButton'
@@ -7,7 +8,7 @@ import Typography from '@material-ui/core/Typography'
 import CodeIcon from '@material-ui/icons/Code'
 import CreateNewFolderIcon from '@material-ui/icons/CreateNewFolder'
 import NoteAddIcon from '@material-ui/icons/NoteAdd'
-import Directory from './Directory'
+import Node from './Node'
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -27,7 +28,7 @@ const useStyles = makeStyles(theme => ({
   }
 }))
 
-const EditorDirectoryTree = ({ rootDirectory, onFileSelect }) => {
+const EditorDirectoryTree = ({ rootNode, onDelete, onRename }) => {
   const classes = useStyles()
   return (
     <div className={classes.root}>
@@ -46,9 +47,19 @@ const EditorDirectoryTree = ({ rootDirectory, onFileSelect }) => {
           </IconButton>
         </Tooltip>
       </Box>
-      <Directory directory={rootDirectory}/>
+      <Node
+        node={rootNode}
+        onDelete={onDelete}
+        onRename={onRename}
+      />
     </div>
   )
+}
+
+EditorDirectoryTree.propTypes = {
+  rootNode: PropTypes.object.isRequired,
+  onDelete: PropTypes.func.isRequired,
+  onRename: PropTypes.func.isRequired,
 }
 
 export default EditorDirectoryTree

@@ -1,9 +1,19 @@
+import shortid from 'shortid'
 import React, { Component } from 'react'
 import AceEditor from 'react-ace'
 import Box from '@material-ui/core/Box'
 import PropTypes from 'prop-types'
 import EditorDirectoryTree from './EditorDirectoryTree'
 import EditorToolbar from './EditorToolbar'
+
+const createNewNode = ({
+  ...properties
+}) => {
+  return {
+    id: shortid(),
+    ...properties,
+  }
+}
 
 class Editor extends Component {
   static propTypes = {
@@ -13,14 +23,23 @@ class Editor extends Component {
 
   state = {
     code: '',
-    rootDirectory: {
-      directories: [
-        { name: 'test', files: [{name: 'styles.css', content: ''}] }
-      ],
-      files: [
-        { name: 'index.js', content: '' }
-      ],
-    },
+    rootNode: createNewNode({
+      childNodes: [
+        createNewNode({
+          name: 'test',
+          childNodes: [
+            createNewNode({
+              name: 'styles.css',
+              content: ''
+            })
+          ]
+        }),
+        createNewNode({
+          name: 'index.js',
+          content: ''
+        }),
+      ]
+    }),
     title: '',
   }
 
@@ -72,8 +91,51 @@ class Editor extends Component {
     })
   }
 
-  onFileSelect = (val) => {
-    console.log(val)
+  onNodeDelete = (node, path) => {
+    this.updateTree(path, null)
+  }
+
+  onNodeRename = (node, path, newName) => {
+    this.updateTree(path, {
+      ...node,
+      name: newName,
+    })
+  }
+
+  updateTree = (path, newNode) => {
+    const update = (node, pathIndex) => {
+      if (pathIndex === path.length) {
+        return newNode
+      }
+      const name = path[pathIndex]
+      for (let i = 0; i < node.childNodes.length; i++) {
+        if (node.childNodes[i].name === name) {
+          const res = update(node.childNodes[i], pathIndex + 1)
+          if (res) {
+            return {
+              ...node,
+              childNodes: [
+                ...node.childNodes.slice(0, i),
+                res,
+                ...node.childNodes.slice(i + 1)
+              ],
+            }
+          } else {
+            return {
+              ...node,
+              childNodes: [
+                ...node.childNodes.slice(0, i),
+                ...node.childNodes.slice(i + 1)
+              ],
+            }
+          }
+        }
+      }
+    }
+
+    this.setState({
+      rootNode: update(this.state.rootNode, 0),
+    })
   }
 
   render() {
@@ -94,8 +156,9 @@ class Editor extends Component {
           flexGrow={1}
         >
           <EditorDirectoryTree
-            rootDirectory={this.state.rootDirectory}
-            onFileSelect={this.onFileSelect}
+            rootNode={this.state.rootNode}
+            onDelete={this.onNodeDelete}
+            onRename={this.onNodeRename}
           />
           <AceEditor
             onChange={this.onChangeCode}
