@@ -34,17 +34,24 @@ const useStyles = makeStyles(theme => ({
   },
 }))
 
-const Node = ({ depth, node, path, onDelete, onRename }) => {
+const Node = ({
+  depth,
+  node,
+  path,
+  selectedNodeId,
+  getName,
+  isToggled,
+  onClick,
+  onDelete,
+  onRename
+}) => {
   const classes = useStyles()
-  const [isExpanded, setExpanded] = useState(depth === 0)
 
-  const onClickHeader = () => {
-    setExpanded((prev) => !prev)
-  }
-
+  const nodeName = getName(node)
+  const isNodeToggled = isToggled(node)
   const getIcon = () => {
     if (!node.childNodes) {
-      const ext = node.name.split('.')[1]
+      const ext = nodeName.split('.')[1]
       switch (ext) {
       case 'css':
         return <CSSIcon fontSize="small"/>
@@ -61,7 +68,7 @@ const Node = ({ depth, node, path, onDelete, onRename }) => {
       }
     }
 
-    return (isExpanded) ? (
+    return (isNodeToggled) ? (
       <KeyboardArrowDownIcon fontSize="small"/>
     ) : (
       <ChevronRightIcon fontSize="small"/>
@@ -72,21 +79,26 @@ const Node = ({ depth, node, path, onDelete, onRename }) => {
     <div>
       {depth > 0 &&
       <NodeHeader
+        selected={node.id === selectedNodeId}
         depth={depth}
         icon={getIcon()}
-        text={node.name}
-        onClick={onClickHeader}
+        text={nodeName}
+        onClick={() => onClick(node, path)}
         onDelete={() => onDelete(node, path)}
         onRename={(newName) => onRename(node, path, newName)}
       />
       }
-      <Collapse in={isExpanded}>
+      <Collapse in={isNodeToggled}>
       {node.childNodes && node.childNodes.map(childNode => (
         <Node
           depth={depth + 1}
           node={childNode}
           key={childNode.id}
           path={[...path, childNode.name]}
+          selectedNodeId={selectedNodeId}
+          getName={getName}
+          isToggled={isToggled}
+          onClick={onClick}
           onDelete={onDelete}
           onRename={onRename}
         />
@@ -105,11 +117,14 @@ Node.propTypes = {
   depth: PropTypes.number.isRequired,
   node: PropTypes.shape({
     id: PropTypes.string.isRequired,
-    name: PropTypes.string,
-    content: PropTypes.string,
     childNodes: PropTypes.array,
+    toggled: PropTypes.bool,
   }).isRequired,
   path: PropTypes.array.isRequired,
+  selectedNodeId: PropTypes.string,
+  getName: PropTypes.func.isRequired,
+  isToggled: PropTypes.func.isRequired,
+  onClick: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   onRename: PropTypes.func.isRequired,
 }

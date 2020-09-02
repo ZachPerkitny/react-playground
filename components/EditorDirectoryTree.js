@@ -28,7 +28,15 @@ const useStyles = makeStyles(theme => ({
   }
 }))
 
-const EditorDirectoryTree = ({ rootNode, onDelete, onRename }) => {
+const EditorDirectoryTree = ({
+  rootNode,
+  selectedNodeId,
+  getName,
+  isToggled,
+  onClick,
+  onDelete,
+  onRename,
+}) => {
   const classes = useStyles()
   return (
     <div className={classes.root}>
@@ -48,7 +56,11 @@ const EditorDirectoryTree = ({ rootNode, onDelete, onRename }) => {
         </Tooltip>
       </Box>
       <Node
+        selectedNodeId={selectedNodeId}
         node={rootNode}
+        getName={getName}
+        isToggled={isToggled}
+        onClick={onClick}
         onDelete={onDelete}
         onRename={onRename}
       />
@@ -58,6 +70,10 @@ const EditorDirectoryTree = ({ rootNode, onDelete, onRename }) => {
 
 EditorDirectoryTree.propTypes = {
   rootNode: PropTypes.object.isRequired,
+  selectedNodeId: PropTypes.string,
+  getName: PropTypes.func.isRequired,
+  isToggled: PropTypes.func.isRequired,
+  onClick: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   onRename: PropTypes.func.isRequired,
 }

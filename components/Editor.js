@@ -1,9 +1,9 @@
 import shortid from 'shortid'
 import React, { Component } from 'react'
-import AceEditor from 'react-ace'
-import Box from '@material-ui/core/Box'
 import PropTypes from 'prop-types'
+import Box from '@material-ui/core/Box'
 import EditorDirectoryTree from './EditorDirectoryTree'
+import EditorTabs from './EditorTabs'
 import EditorToolbar from './EditorToolbar'
 
 const createNewNode = ({
@@ -21,53 +21,92 @@ class Editor extends Component {
     onSave: PropTypes.func.isRequired,
   }
 
-  state = {
-    code: '',
-    rootNode: createNewNode({
-      childNodes: [
-        createNewNode({
-          name: 'test',
-          childNodes: [
-            createNewNode({
-              name: 'styles.css',
-              content: ''
-            })
-          ]
-        }),
-        createNewNode({
+  constructor(props) {
+    super(props)
+    const indexNode = createNewNode()
+    const rootNode = createNewNode({
+      childNodes: [indexNode,],
+    })
+    this.state = {
+      nodeData: {
+        [rootNode.id]: {
+          name: 'root',
+          toggled: true,
+        },
+        [indexNode.id]: {
           name: 'index.js',
-          content: ''
-        }),
-      ]
-    }),
-    title: '',
+          content: '',
+        },
+      },
+      rootNode,
+      selectedNodeId: indexNode.id,
+      tabs: [indexNode.id],
+      selectedTab: indexNode.id,
+      title: '',
+    }
   }
 
   componentDidMount() {
-    document.addEventListener('keydown', this.onKeydown)
+    document.addEventListener('keydown', this.handleDocumentKeydown)
   }
 
   componentWillUnmount(){
-    document.removeEventListener('keydown', this.onKeydown)
+    document.removeEventListener('keydown', this.handleDocumentKeydown)
   }
 
-  onChangeCode = (value) => {
+  handleCodeChange = (value) => {
     this.setState({
-      code: value
+      nodeData: {
+        ...this.state.nodeData,
+        [this.state.selectedTab]: {
+          ...this.state.nodeData[this.state.selectedTab],
+          content: value,
+        }
+      }
     })
   }
 
-  onChangeTitle = (e) => {
+  handleCloseTab = (nodeId) => {
+    const {
+      selectedTab,
+      tabs
+    } = this.state
+    const i = tabs.indexOf(nodeId)
+    const newTabs = [
+      ...tabs.slice(0, i),
+      ...tabs.slice(i + 1),
+    ]
+    this.setState({ tabs: newTabs })
+    if (nodeId === selectedTab) {
+      this.setState({
+        selectedNodeId: newTabs[0],
+        selectedTab: newTabs[0],
+      })
+    }
+  }
+
+  handleSelectTab = (nodeId) => {
     this.setState({
-      title: e.target.value,
+      selectedNodeId: nodeId,
+      selectedTab: nodeId
     })
   }
 
-  onLoad = (editor) => {
-    editor.renderer.setPadding(5)
+  getNodeName = (node) => {
+    const { nodeData } = this.state
+    return nodeData[(typeof node === 'string') ? node : node.id].name
   }
 
-  onKeydown = (e) => {
+  isNodeToggled = (node) => {
+    const { nodeData } = this.state
+    return nodeData[(typeof node === 'string') ? node : node.id].toggled
+  }
+
+  handleChangeTitle = (value) => {
+    this.setState({ title: value })
+  }
+
+  handleDocumentKeydown = (e) => {
     if (e.keyCode === 13 && e.ctrlKey) {
       e.preventDefault()
       this.props.onRun(this.state.code)
@@ -80,25 +119,59 @@ class Editor extends Component {
     }
   }
 
-  onRun = () => {
+  handleClickRun = () => {
     this.props.onRun(this.state.code)
   }
 
-  onSave = () => {
+  handleClickSave = () => {
     this.props.onSave({
       code: this.state.code,
       title: this.state.title,
     })
   }
 
-  onNodeDelete = (node, path) => {
+  handleNodeClick = (node, path) => {
+    if (node.childNodes) {
+      const { nodeData } = this.state
+      this.setState({
+        nodeData: {
+          ...nodeData,
+          [node.id]: {
+            ...nodeData[node.id],
+            toggled: !nodeData[node.id].toggled,
+          }
+        }
+      })
+    } else {
+      const {
+        tabs,
+        selectedTab,
+      } = this.state
+
+      if (tabs.indexOf(node.id) === -1) {
+        this.setState({ tabs: [...tabs, node.id] })
+      }
+
+      if (selectedTab !== node.id) {
+        this.setState({ selectedTab: node.id })
+      }
+    }
+    this.setState({ selectedNodeId: node.id })
+  }
+
+  handleNodeDelete = (node, path) => {
     this.updateTree(path, null)
   }
 
-  onNodeRename = (node, path, newName) => {
-    this.updateTree(path, {
-      ...node,
-      name: newName,
+  handleNodeRename = (node, path, newName) => {
+    this.setState({
+      nodeData: {
+        ...this.state.nodeData,
+        [node.id]: {
+          ...this.state.nodeData[node.id],
+          name: newName,
+        }
+      }
     })
   }
 
@@ -139,6 +212,14 @@ class Editor extends Component {
   }
 
   render() {
+    const {
+      nodeData,
+      rootNode,
+      selectedNodeId,
+      selectedTab,
+      tabs,
+      title,
+    } = this.state
     return (
       <Box
         display="flex"
@@ -146,28 +227,32 @@ class Editor extends Component {
         flexGrow={1}
       >
         <EditorToolbar
-          onClickRun={this.onRun}
-          onClickSave={this.onSave}
-          onChangeTitle={this.onChangeTitle}
-          title={this.state.title}
+          onClickRun={this.handleClickRun}
+          onClickSave={this.handleClickSave}
+          onChangeTitle={this.handleChangeTitle}
+          title={title}
         />
         <Box
           display="flex"
           flexGrow={1}
         >
           <EditorDirectoryTree
-            rootNode={this.state.rootNode}
-            onDelete={this.onNodeDelete}
-            onRename={this.onNodeRename}
+            rootNode={rootNode}
+            selectedNodeId={selectedNodeId}
+            getName={this.getNodeName}
+            isToggled={this.isNodeToggled}
+            onClick={this.handleNodeClick}
+            onDelete={this.handleNodeDelete}
+            onRename={this.handleNodeRename}
           />
-          <AceEditor
-            onChange={this.onChangeCode}
-            onLoad={this.onLoad}
-            mode="javascript"
-            value={this.state.code}
-            width="50%"
-            height="auto"
-            style={{ flexGrow: 1 }}
+          <EditorTabs
+            code={nodeData[selectedTab].content}
+            tabs={tabs}
+            selectedTab={selectedTab}
+            getName={this.getNodeName}
+            onCodeChange={this.handleCodeChange}
+            onCloseTab={this.handleCloseTab}
+            onSelectTab={this.handleSelectTab}
           />
         </Box>
       </Box>

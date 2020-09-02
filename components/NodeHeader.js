@@ -16,11 +16,16 @@ const styles = theme => ({
     paddingTop: theme.spacing(0.5),
     paddingLeft: props => theme.spacing(2) * props.depth,
     paddingRight: theme.spacing(0.5),
+    cursor: 'pointer',
+    flexGrow: 1,
+  },
+  rootUnselected: {
     '&:hover': {
       backgroundColor: theme.palette.action.hover,
     },
-    cursor: 'pointer',
-    flexGrow: 1,
+  },
+  rootSelected: {
+    backgroundColor: theme.palette.action.selected,
   },
   text: {
     marginLeft: theme.spacing(1),
@@ -42,11 +47,12 @@ class NodeHeader extends Component {
   static propTypes = {
     depth: PropTypes.number.isRequired,
     icon: PropTypes.node.isRequired,
+    selected: PropTypes.bool.isRequired,
     text: PropTypes.string.isRequired,
     onClick: PropTypes.func,
     onDelete: PropTypes.func.isRequired,
     onRename: PropTypes.func.isRequired,
-  } 
+  }
 
   constructor(props) {
     super(props)
@@ -59,14 +65,14 @@ class NodeHeader extends Component {
   }
 
   componentDidMount() {
-    document.addEventListener('mousedown', this.onClickOutside)
+    document.addEventListener('mousedown', this.handleClickOutside)
   }
 
   componentWillUnmount() {
-    document.removeEventListener('mousedown', this.onClickOutside)
+    document.removeEventListener('mousedown', this.handleClickOutside)
   }
 
-  onClickOutside = ({ target }) => {
+  handleClickOutside = ({ target }) => {
     if (this.state.isEditing && this.ref && !this.ref.current.contains(target)) {
       this.setState({
         isEditing: false,
@@ -75,17 +81,17 @@ class NodeHeader extends Component {
     }
   }
 
-  onClickContainer = (e) => {
+  handleClickContainer = (e) => {
     if (this.props.onClick) this.props.onClick()
   }
 
-  onChangeRenameText = (e) => {
+  handleChangeRenameText = (e) => {
     this.setState({
       modifiedText: e.target.value,
     })
   }
 
-  onKeyDownRenameText = ({ keyCode }) => {
+  handleKeyDownRenameText = ({ keyCode }) => {
     if (keyCode === 27) {
       this.setState({
         isEditing: false,
@@ -93,7 +99,7 @@ class NodeHeader extends Component {
     }
   }
 
-  onRenameFormSubmit = (e) => {
+  handleRenameFormSubmit = (e) => {
     e.preventDefault()
     this.setState({
       isEditing: false,
@@ -101,21 +107,21 @@ class NodeHeader extends Component {
     this.props.onRename(this.state.modifiedText)
   }
 
-  onOpenMenu = (e) => {
+  handleOpenMenu = (e) => {
     e.stopPropagation()
     this.setState({
       anchorEl: e.target,
     })
   }
 
-  onCloseMenu = (e) => {
+  handleCloseMenu = (e) => {
     e.stopPropagation()
     this.setState({
       anchorEl: null,
     })
   }
 
-  onSelectRename = (e) => {
+  handleSelectRename = (e) => {
     e.stopPropagation()
     this.setState({
       anchorEl: null,
@@ -124,7 +130,7 @@ class NodeHeader extends Component {
     })
   }
 
-  onSelectDelete = (e) => {
+  handleSelectDelete = (e) => {
     e.stopPropagation()
     this.setState({ anchorEl: null })
     this.props.onDelete()
@@ -134,31 +140,35 @@ class NodeHeader extends Component {
     const {
       classes,
       icon,
-      text
+      selected,
+      text,
     } = this.props
     const {
       anchorEl,
       isEditing,
-      modifiedText
+      modifiedText,
     } = this.state
+    const rootClass = (selected) ?
+      `${classes.root} ${classes.rootSelected}` :
+      `${classes.root} ${classes.rootUnselected}`
     return (
       <Box
-        className={classes.root}
+        className={rootClass}
         display="flex"
         justifyContent="space-between"
-        onClick={this.onClickContainer}
+        onClick={this.handleClickContainer}
         ref={this.ref}
       >
         <Box display="flex" alignItems="center">
           {icon}
           {(isEditing) ? (
-          <form onSubmit={this.onRenameFormSubmit} className={classes.form}>
+          <form onSubmit={this.handleRenameFormSubmit} className={classes.form}>
             <TextField
               autoFocus="true"
               className={classes.textField}
               onClick={(e) => e.stopPropagation()}
-              onChange={this.onChangeRenameText}
-              onKeyDown={this.onKeyDownRenameText}
+              onChange={this.handleChangeRenameText}
+              onKeyDown={this.handleKeyDownRenameText}
               value={modifiedText}/>
           </form>
           ) : (
@@ -169,18 +179,18 @@ class NodeHeader extends Component {
         </Box>
         {!isEditing && (
         <div>
-          <IconButton onClick={this.onOpenMenu}>
+          <IconButton onClick={this.handleOpenMenu}>
             <MoreVertIcon fontSize="small"/>
           </IconButton>
           <Menu
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
-            onClose={this.onCloseMenu}
+            onClose={this.handleCloseMenu}
           >
-            <MenuItem onClick={this.onSelectRename}>
+            <MenuItem onClick={this.handleSelectRename}>
               Rename
             </MenuItem>
-            <MenuItem className={classes.deleteText} onClick={this.onSelectDelete}>
+            <MenuItem className={classes.deleteText} onClick={this.handleSelectDelete}>
               Delete
             </MenuItem>
           </Menu>
