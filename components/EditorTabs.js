@@ -94,6 +94,7 @@ const EditorTabs = ({
             <Box
               className={className}
               display="flex"
+              key={nodeId}
               onClick={handleSelectTab(nodeId)}
             >
               <Typography>

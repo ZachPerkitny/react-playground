@@ -25,19 +25,27 @@ const useStyles = makeStyles(theme => ({
   },
   margin: {
     marginRight: theme.spacing(0.5),
-  }
+  },
 }))
 
 const EditorDirectoryTree = ({
+  creatingNodeType,
   rootNode,
   selectedNodeId,
   getName,
   isToggled,
   onClick,
   onDelete,
+  onNewNodeStart,
+  onNewNodeEnd,
   onRename,
 }) => {
   const classes = useStyles()
+
+  const handleClickNewNode = (type) => () => {
+    onNewNodeStart(rootNode, [], type)
+  }
+
   return (
     <div className={classes.root}>
       <Box display="flex" alignItems="center" className={classes.titleContainer}>
@@ -45,23 +53,26 @@ const EditorDirectoryTree = ({
           Files
         </Typography>
         <Tooltip title="Add file">
-          <IconButton size="small" className={classes.margin}>
+          <IconButton size="small" className={classes.margin} onClick={handleClickNewNode('file')}>
             <NoteAddIcon fontSize="inherit"/>
           </IconButton>
         </Tooltip>
         <Tooltip title="Add folder">
-          <IconButton size="small">
+          <IconButton size="small" onClick={handleClickNewNode('folder')}>
             <CreateNewFolderIcon fontSize="inherit"/>
           </IconButton>
         </Tooltip>
       </Box>
       <Node
+        creatingNodeType={creatingNodeType}
         selectedNodeId={selectedNodeId}
         node={rootNode}
         getName={getName}
         isToggled={isToggled}
         onClick={onClick}
         onDelete={onDelete}
+        onNewNodeStart={onNewNodeStart}
+        onNewNodeEnd={onNewNodeEnd}
         onRename={onRename}
       />
     </div>
@@ -69,12 +80,15 @@ const EditorDirectoryTree = ({
 }
 
 EditorDirectoryTree.propTypes = {
+  creatingNodeType: PropTypes.string,
   rootNode: PropTypes.object.isRequired,
   selectedNodeId: PropTypes.string,
   getName: PropTypes.func.isRequired,
   isToggled: PropTypes.func.isRequired,
   onClick: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
+  onNewNodeStart: PropTypes.func.isRequired,
+  onNewNodeEnd: PropTypes.func.isRequired,
   onRename: PropTypes.func.isRequired,
 }
 

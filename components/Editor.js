@@ -28,6 +28,7 @@ class Editor extends Component {
       childNodes: [indexNode,],
     })
     this.state = {
+      creatingNodeType: null,
       nodeData: {
         [rootNode.id]: {
           name: 'root',
@@ -163,6 +164,29 @@ class Editor extends Component {
     this.updateTree(path, null)
   }
 
+  handleNewNodeStart = (parentNode, path, type) => {
+    const { nodeData } = this.state
+    this.setState({
+      creatingNodeType: type,
+      nodeData: {
+        ...nodeData,
+        [parentNode.id]: {
+          ...nodeData[parentNode.id],
+          toggled: true,
+        }
+      },
+    })
+  }
+
+  handleNewNodeEnd = (parentNode, path, type, name) => {
+    if (!name) {
+      this.setState({
+        creatingNodeType: null,
+      })
+      return
+    }
+  }
+
   handleNodeRename = (node, path, newName) => {
     this.setState({
       nodeData: {
@@ -176,9 +200,16 @@ class Editor extends Component {
   }
 
   updateTree = (path, newNode) => {
+    const {
+      nodeData,
+      rootNode,
+    } = this.state
+    const removedNodes = []
+
     const update = (node, pathIndex) => {
       if (pathIndex === path.length) {
-        return newNode
+        return (typeof newNode === 'function') ?
+          newNode(node) : newNode
       }
       const name = path[pathIndex]
       for (let i = 0; i < node.childNodes.length; i++) {
@@ -194,6 +225,7 @@ class Editor extends Component {
               ],
             }
           } else {
+            removedNodes.push(res)
             return {
               ...node,
               childNodes: [
@@ -206,13 +238,22 @@ class Editor extends Component {
       }
     }
 
-    this.setState({
-      rootNode: update(this.state.rootNode, 0),
-    })
+    const newRootNode = update(rootNode, 0)
+    if (removedNodes.length) {
+      const newNodeData = Object.keys(nodeData).reduce((object, key) => {
+        if (removedNodes.indexOf(key) === -1) {
+          object[key] = nodeData[key]
+        }
+        return object
+      }, {})
+      this.setState({ nodeData: newNodeData })
+    }
+    this.setState({ rootNode: newRootNode })
   }
 
   render() {
     const {
+      creatingNodeType,
       nodeData,
       rootNode,
       selectedNodeId,
@@ -237,11 +278,14 @@ class Editor extends Component {
           flexGrow={1}
         >
           <EditorDirectoryTree
+            creatingNodeType={creatingNodeType}
             rootNode={rootNode}
             selectedNodeId={selectedNodeId}
             getName={this.getNodeName}
             isToggled={this.isNodeToggled}
             onClick={this.handleNodeClick}
+            onNewNodeStart={this.handleNewNodeStart}
+            onNewNodeEnd={this.handleNewNodeEnd}
             onDelete={this.handleNodeDelete}
             onRename={this.handleNodeRename}
           />

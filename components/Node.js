@@ -3,38 +3,61 @@ import PropTypes from 'prop-types'
 import { makeStyles } from '@material-ui/core/styles'
 import Box from '@material-ui/core/Box'
 import Collapse from '@material-ui/core/Collapse'
+import IconButton from '@material-ui/core/IconButton'
+import Menu from '@material-ui/core/Menu'
+import MenuItem from '@material-ui/core/MenuItem'
 import Typography from '@material-ui/core/Typography'
 import ChevronRightIcon from '@material-ui/icons/ChevronRight'
 import DescriptionIcon from '@material-ui/icons/Description'
 import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown'
 import FolderIcon from '@material-ui/icons/Folder'
-import NodeHeader from './NodeHeader'
+import MoreVertIcon from '@material-ui/icons/MoreVert'
+import NodeNameForm from './NodeNameForm'
 import CSSIcon from './icons/CSS'
 import JSIcon from './icons/JS'
 import LessIcon from './icons/Less'
 import SassIcon from './icons/Sass'
 
 const useStyles = makeStyles(theme => ({
-  margin: {
+  header: {
+    height: '44px',
+    paddingBottom: theme.spacing(0.5),
+    paddingTop: theme.spacing(0.5),
+    paddingLeft: props => theme.spacing(2) * props.depth,
+    paddingRight: theme.spacing(0.5),
+    cursor: 'pointer',
+    flexGrow: 1,
+  },
+  headerUnselected: {
+    '&:hover': {
+      backgroundColor: theme.palette.action.hover,
+    },
+  },
+  headerSelected: {
+    backgroundColor: theme.palette.action.selected,
+  },
+  headerIcon: {
     marginRight: theme.spacing(1),
   },
-  filesEnter: {
-    opacity: 0,
+  deleteText: {
+    fontWeight: theme.typography.fontWeightMedium,
+    color: theme.palette.error.main,
   },
-  filesEnterActive: {
-    opacity: 1,
-    transition: 'opacity 500ms ease-in',
+  nodeCreationContainer: {
+    height: '44px',
+    paddingBottom: theme.spacing(0.5),
+    paddingTop: theme.spacing(0.5),
+    paddingLeft: props => theme.spacing(2) * (props.depth + 1),
+    paddingRight: theme.spacing(0.5),
+    flexGrow: 1,
   },
-  filesLeave: {
-    opacity: 1,
-  },
-  filesLeaveActive: {
-    opacity: 0,
-    transition: 'opacity 300ms ease-in',
+  nodeCreationIcon: {
+    marginRight: theme.spacing(1),
   },
 }))
 
 const Node = ({
+  creatingNodeType,
   depth,
   node,
   path,
@@ -43,51 +66,162 @@ const Node = ({
   isToggled,
   onClick,
   onDelete,
+  onNewNodeStart,
+  onNewNodeEnd,
   onRename
 }) => {
-  const classes = useStyles()
+  const classes = useStyles({ depth })
+
+  const [anchorEl, setAnchorEl] = useState(null)
+  const [isEditing, setIsEditing] = useState(false)
 
   const nodeName = getName(node)
+  const isNodeSelected = (selectedNodeId === node.id)
   const isNodeToggled = isToggled(node)
+  const isFolder = Boolean(node.childNodes)
+
+  const handleClickContainer = () => {
+    if (onClick) onClick(node, path)
+  }
+
+  const handleRenameFormCancel = () => {
+    console.log('hello?')
+    setIsEditing(false)
+  }
+
+  const handleRenameFormSubmit = (text) => {
+    setIsEditing(false)
+    onRename(node, path, text)
+  }
+
+  const handleOpenMenu = (e) => {
+    e.stopPropagation()
+    setAnchorEl(e.target)
+  }
+
+  const handleCloseMenu = (e) => {
+    e.stopPropagation()
+    setAnchorEl(null)
+  }
+
+  const handleSelectRename = (e) => {
+    e.stopPropagation()
+    setAnchorEl(null)
+    setIsEditing(true)
+  }
+
+  const handleSelectDelete = (e) => {
+    e.stopPropagation()
+    setAnchorEl(null)
+    onDelete()
+  }
+
+  const handleNewNodeSubmit = (text) => {
+    onNewNodeEnd(node, path, creatingNodeType, text)
+  }
+
+  const handleNewNodeCancel = () => {
+    onNewNodeEnd(node, path, creatingNodeType, '')
+  }
+
   const getIcon = () => {
+    const props = {
+      className: classes.headerIcon,
+      fontSize: 'small',
+    }
+    let Icon
     if (!node.childNodes) {
       const ext = nodeName.split('.')[1]
       switch (ext) {
       case 'css':
-        return <CSSIcon fontSize="small"/>
+        Icon = CSSIcon
+        break
       case 'js':
       case 'jsx':
-        return <JSIcon fontSize="small"/>
+        Icon = JSIcon
+        break
       case 'less':
-        return <LessIcon fontSize="small"/>
+        Icon = LessIcon
+        break
       case 'sass':
       case 'scss':
-        return <SassIcon fontSize="small"/>
+        Icon = SassIcon
+        break
       default:
-        return <DescriptionIcon fontSize="small"/>
+        Icon = DescriptionIcon
+        break
       }
+    } else {
+      Icon = (isNodeToggled) ? (
+        KeyboardArrowDownIcon
+      ) : (
+        ChevronRightIcon
+      )
     }
 
-    return (isNodeToggled) ? (
-      <KeyboardArrowDownIcon fontSize="small"/>
-    ) : (
-      <ChevronRightIcon fontSize="small"/>
+    return <Icon {...props}/>
+  }
+
+  const getHeader = () => {
+    if (depth === 0) return null
+    const rootClass =  (isNodeSelected) ?
+      `${classes.header} ${classes.headerSelected}` :
+      `${classes.header} ${classes.headerUnselected}`
+    return (
+      <Box
+        className={rootClass}
+        display="flex"
+        justifyContent="space-between"
+        onClick={handleClickContainer}
+      >
+        <Box display="flex" alignItems="center">
+          {getIcon()}
+          {(isEditing) ? (
+          <NodeNameForm
+            initialText={nodeName}
+            onCancel={handleRenameFormCancel}
+            onSubmit={handleRenameFormSubmit}/>
+          ) : (
+          <Typography className={classes.text}>
+            {nodeName}
+          </Typography>
+          )}
+        </Box>
+        {!isEditing && (
+        <div>
+          <IconButton onClick={handleOpenMenu}>
+            <MoreVertIcon fontSize="small"/>
+          </IconButton>
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleCloseMenu}
+          >
+            <MenuItem onClick={handleSelectRename}>
+              Rename
+            </MenuItem>
+            {isFolder && 
+            <Fragment>
+              <MenuItem>
+                Add file
+              </MenuItem>
+              <MenuItem>
+                Add folder
+              </MenuItem>
+            </Fragment>
+            }
+            <MenuItem className={classes.deleteText} onClick={handleSelectDelete}>
+              Delete
+            </MenuItem>
+          </Menu>
+        </div>)}
+      </Box>
     )
   }
 
   return (
     <div>
-      {depth > 0 &&
-      <NodeHeader
-        selected={node.id === selectedNodeId}
-        depth={depth}
-        icon={getIcon()}
-        text={nodeName}
-        onClick={() => onClick(node, path)}
-        onDelete={() => onDelete(node, path)}
-        onRename={(newName) => onRename(node, path, newName)}
-      />
-      }
+      {getHeader()}
       <Collapse in={isNodeToggled}>
       {node.childNodes && node.childNodes.map(childNode => (
         <Node
@@ -100,20 +234,41 @@ const Node = ({
           isToggled={isToggled}
           onClick={onClick}
           onDelete={onDelete}
+          onNewNodeStart={onNewNodeStart}
+          onNewNodeEnd={onNewNodeEnd}
           onRename={onRename}
         />
       ))}
+      {creatingNodeType && (depth === 0 || isNodeSelected) &&
+      <Box
+        className={classes.nodeCreationContainer}
+        alignItems="center"
+        display="flex"
+      >
+        {(creatingNodeType === 'file') ? (
+          <DescriptionIcon className={classes.nodeCreationIcon} fontSize="small"/>
+        ) : (
+          <FolderIcon className={classes.nodeCreationIcon} fontSize="small"/>
+        )}
+        <NodeNameForm
+          onCancel={handleNewNodeCancel}
+          onSubmit={handleNewNodeSubmit}
+        />
+      </Box>
+      }
       </Collapse>
     </div>
   )
 }
 
 Node.defaultProps = {
+  creatingNodeType: null,
   depth: 0,
   path: [],
 }
 
 Node.propTypes = {
+  creatingNodeType: PropTypes.oneOf([null, 'file', 'folder']),
   depth: PropTypes.number.isRequired,
   node: PropTypes.shape({
     id: PropTypes.string.isRequired,
@@ -126,6 +281,8 @@ Node.propTypes = {
   isToggled: PropTypes.func.isRequired,
   onClick: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
+  onNewNodeStart: PropTypes.func.isRequired,
+  onNewNodeEnd: PropTypes.func.isRequired,
   onRename: PropTypes.func.isRequired,
 }
 
