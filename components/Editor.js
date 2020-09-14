@@ -161,7 +161,7 @@ class Editor extends Component {
   }
 
   handleNodeDelete = (node, path) => {
-    this.updateTree(path, null)
+    this.updateNodeAtPath(path, null)
   }
 
   handleNewNodeStart = (parentNode, path, type) => {
@@ -173,8 +173,9 @@ class Editor extends Component {
         [parentNode.id]: {
           ...nodeData[parentNode.id],
           toggled: true,
-        }
+        },
       },
+      selectedNodeId: parentNode.id,
     })
   }
 
@@ -185,6 +186,19 @@ class Editor extends Component {
       })
       return
     }
+
+    const { creatingNodeType, } = this.state
+    let newNode
+    if (creatingNodeType === 'folder') {
+      newNode = createNewNode({
+        childNodes: [],
+      })
+    } else {
+      newNode = createNewNode()
+    }
+
+    this.insertNodeAtPath(path, newNode, { name })
+    this.setState({ creatingNodeType: null, })
   }
 
   handleNodeRename = (node, path, newName) => {
@@ -199,7 +213,50 @@ class Editor extends Component {
     })
   }
 
-  updateTree = (path, newNode) => {
+  insertNodeAtPath = (path, newNode, newNodeData) => {
+    const {
+      nodeData,
+      rootNode,
+    } = this.state
+
+    const insert = (node, pathIndex) => {
+      if (pathIndex === path.length) {
+        return {
+          ...node,
+          childNodes: [
+            ...node.childNodes,
+            (typeof newNode === 'function') ?
+              newNode(node) : newNode,
+          ]
+        }
+      }
+      const name = path[pathIndex]
+      for (let i = 0; i < node.childNodes.length; i++) {
+        if (this.getNodeName(node.childNodes[i]) === name) {
+          return {
+            ...node,
+            childNodes: [
+              ...node.childNodes.slice(0, i),
+              insert(node.childNodes[i], pathIndex + 1),
+              ...node.childNodes.slice(i + 1)
+            ],
+          }
+        }
+      }
+    }
+
+    this.setState({
+      nodeData: {
+        ...nodeData,
+        [newNode.id]: {
+          ...newNodeData
+        },
+      },
+      rootNode: insert(rootNode, 0),
+    })
+  }
+
+  updateNodeAtPath = (path, newNode) => {
     const {
       nodeData,
       rootNode,
@@ -213,7 +270,7 @@ class Editor extends Component {
       }
       const name = path[pathIndex]
       for (let i = 0; i < node.childNodes.length; i++) {
-        if (node.childNodes[i].name === name) {
+        if (this.getNodeName(node.childNodes[i]) === name) {
           const res = update(node.childNodes[i], pathIndex + 1)
           if (res) {
             return {

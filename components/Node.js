@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { Fragment, useState } from 'react'
 import PropTypes from 'prop-types'
 import { makeStyles } from '@material-ui/core/styles'
 import Box from '@material-ui/core/Box'
@@ -60,7 +60,7 @@ const Node = ({
   creatingNodeType,
   depth,
   node,
-  path,
+  parentPath,
   selectedNodeId,
   getName,
   isToggled,
@@ -76,22 +76,23 @@ const Node = ({
   const [isEditing, setIsEditing] = useState(false)
 
   const nodeName = getName(node)
+  console.log(parentPath, nodeName)
+  const nodePath = (parentPath === null) ? [] : [...parentPath, nodeName]
   const isNodeSelected = (selectedNodeId === node.id)
   const isNodeToggled = isToggled(node)
   const isFolder = Boolean(node.childNodes)
 
   const handleClickContainer = () => {
-    if (onClick) onClick(node, path)
+    if (onClick) onClick(node, nodePath)
   }
 
   const handleRenameFormCancel = () => {
-    console.log('hello?')
     setIsEditing(false)
   }
 
   const handleRenameFormSubmit = (text) => {
     setIsEditing(false)
-    onRename(node, path, text)
+    onRename(node, nodePath, text)
   }
 
   const handleOpenMenu = (e) => {
@@ -113,15 +114,21 @@ const Node = ({
   const handleSelectDelete = (e) => {
     e.stopPropagation()
     setAnchorEl(null)
-    onDelete()
+    onDelete(node, nodePath)
+  }
+
+  const handleNewNodeStart = (type) => (e) => {
+    e.stopPropagation()
+    setAnchorEl(null)
+    onNewNodeStart(node, [], type)
   }
 
   const handleNewNodeSubmit = (text) => {
-    onNewNodeEnd(node, path, creatingNodeType, text)
+    onNewNodeEnd(node, nodePath, creatingNodeType, text)
   }
 
   const handleNewNodeCancel = () => {
-    onNewNodeEnd(node, path, creatingNodeType, '')
+    onNewNodeEnd(node, nodePath, creatingNodeType, '')
   }
 
   const getIcon = () => {
@@ -202,10 +209,10 @@ const Node = ({
             </MenuItem>
             {isFolder && 
             <Fragment>
-              <MenuItem>
+              <MenuItem onClick={handleNewNodeStart('file')}>
                 Add file
               </MenuItem>
-              <MenuItem>
+              <MenuItem onClick={handleNewNodeStart('folder')}>
                 Add folder
               </MenuItem>
             </Fragment>
@@ -219,16 +226,18 @@ const Node = ({
     )
   }
 
+  console.log(isNodeSelected, creatingNodeType, isNodeSelected)
   return (
     <div>
       {getHeader()}
       <Collapse in={isNodeToggled}>
       {node.childNodes && node.childNodes.map(childNode => (
         <Node
+          creatingNodeType={creatingNodeType}
           depth={depth + 1}
           node={childNode}
           key={childNode.id}
-          path={[...path, childNode.name]}
+          parentPath={nodePath}
           selectedNodeId={selectedNodeId}
           getName={getName}
           isToggled={isToggled}
@@ -239,7 +248,7 @@ const Node = ({
           onRename={onRename}
         />
       ))}
-      {creatingNodeType && (depth === 0 || isNodeSelected) &&
+      {isFolder && creatingNodeType && isNodeSelected &&
       <Box
         className={classes.nodeCreationContainer}
         alignItems="center"
@@ -264,7 +273,7 @@ const Node = ({
 Node.defaultProps = {
   creatingNodeType: null,
   depth: 0,
-  path: [],
+  parentPath: null,
 }
 
 Node.propTypes = {
@@ -275,7 +284,7 @@ Node.propTypes = {
     childNodes: PropTypes.array,
     toggled: PropTypes.bool,
   }).isRequired,
-  path: PropTypes.array.isRequired,
+  parentPath: PropTypes.array.isRequired,
   selectedNodeId: PropTypes.string,
   getName: PropTypes.func.isRequired,
   isToggled: PropTypes.func.isRequired,
